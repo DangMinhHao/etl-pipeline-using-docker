@@ -16,8 +16,8 @@ def download(url):
     return output
 
 # Create connection with postgres
-def connection():
-    db_path = 'postgresql://root:root@localhost:5432/ny_taxi'
+def connection(host):
+    db_path = f'postgresql://root:root@{host}:5432/ny_taxi'
     engine = create_engine(db_path)
     return engine
 
@@ -51,8 +51,9 @@ def ingestion(df_iter, engine):
 def main(args):
     url = args.url
     db_name = args.db_name
+    host = args.host
     output = download(url)
-    engine = connection()
+    engine = connection(host)
     df_iter = create_schema(output, engine, db_name)
     ingestion(df_iter, engine)
     
@@ -63,6 +64,7 @@ if __name__ == '__main__':
     # Specify argument needed
     parser.add_argument('--url', required=True, help='url to download data')
     parser.add_argument('--db_name', required=True, help='name of table in Postgres')
+    parser.add_argument('--host', required=True, help='host name of Postgres container')
     # Parse the arguments
     args = parser.parse_args()
     
