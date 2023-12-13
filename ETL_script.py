@@ -28,7 +28,7 @@ def create_schema(output, engine, db_name):
     return df_iter
 
 # Insert and process data
-def ingestion(df_iter, engine):
+def ingestion(df_iter, engine, db_name):
     loop_start = time()
     while True:
         try:
@@ -37,7 +37,7 @@ def ingestion(df_iter, engine):
             df = next(df_iter)
             df['tpep_pickup_datetime'] = pd.to_datetime(df['tpep_pickup_datetime'])
             df['tpep_dropoff_datetime'] = pd.to_datetime(df['tpep_dropoff_datetime'])
-            df.to_sql('yellow_tripdata_2021', con=engine, if_exists='append', index=False)
+            df.to_sql(db_name, con=engine, if_exists='append', index=False)
             
             t_end = time()
             
@@ -55,7 +55,7 @@ def main(args):
     output = download(url)
     engine = connection(host)
     df_iter = create_schema(output, engine, db_name)
-    ingestion(df_iter, engine)
+    ingestion(df_iter, engine, db_name)
     
 if __name__ == '__main__':
     # Create required command line arguments when running this file
