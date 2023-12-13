@@ -10,7 +10,7 @@ def download(url):
     filename = os.path.basename(url)
     if url.endswith('csv.gz'):
         os.system(f'gunzip "{filename.strip()}"')
-        output = filename.strip()
+        output, extension = os.path.splitext(filename.strip())
     else:
         output = filename.strip()
     return output
