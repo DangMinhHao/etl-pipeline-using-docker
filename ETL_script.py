@@ -1,10 +1,19 @@
 import os
 import pandas as pd
-import pyarrow.parquet as pq
 import argparse
 from sqlalchemy import create_engine
 from time import time
 
+# Download data
+def download(url):
+    os.system(f'wget {url}')
+    filename = os.path.basename(url)
+    if url.endswith('csv.gz'):
+        os.system(f'gunzip "{filename.strip()}"')
+        output = filename.strip()
+    else:
+        output = filename.strip()
+    return output
 
 # Create connection with postgres
 def connection():
@@ -12,23 +21,20 @@ def connection():
     engine = create_engine(db_path)
     return engine
 
-# Download data and create dâtbase schema
-def download(url, engine, db_name):
-    os.system(f'curl -O {url}')
-    filename = os.path.basename(url)
-    print(filename)
-    parquet_iter = pq.read_table(filename.strip(), iterator=True, chunksize=100000, encoding='utf-8')
-    df = next(parquet_iter).to_pandas().head(0).to_sql(db_name, con=engine, if_exists='replace', index=False)
-    return parquet_iter
+# Create database schema
+def create_schema(output, engine, db_name):
+    df_iter = pd.read_csv(output, iterator=True, chunksize=100000)
+    df = next(df_iter).head(0).to_sql(db_name, con=engine, if_exists='replace', index=False)
+    return df_iter
 
 # Insert and process data
-def ingestion(parquet_iter, engine):
+def ingestion(df_iter, engine):
     loop_start = time()
     while True:
         try:
             t_start = time()
             
-            df = next(parquet_iter).to_pandas()
+            df = next(df_iter)
             df['tpep_pickup_datetime'] = pd.to_datetime(df['tpep_pickup_datetime'])
             df['tpep_dropoff_datetime'] = pd.to_datetime(df['tpep_dropoff_datetime'])
             df.to_sql('yellow_tripdata_2021', con=engine, if_exists='append', index=False)
@@ -45,9 +51,10 @@ def ingestion(parquet_iter, engine):
 def main(args):
     url = args.url
     db_name = args.db_name
+    output = download(url)
     engine = connection()
-    parquet_iter = download(url, engine, db_name)
-    ingestion(parquet_iter, engine)
+    df_iter = create_schema(output, engine, db_name)
+    ingestion(df_iter, engine)
     
 if __name__ == '__main__':
     # Create required command line arguments when running this file
